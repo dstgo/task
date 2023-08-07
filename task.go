@@ -1,11 +1,10 @@
 package task
 
 import (
-	"fmt"
 	"sync"
 )
 
-func NewTask(onPanic func(err error)) *Task {
+func NewTask(onPanic func(err any)) *Task {
 	return &Task{
 		jobs:    make([]Job, 0, 10),
 		onPanic: onPanic,
@@ -19,7 +18,7 @@ type Job func()
 
 type Task struct {
 	jobs    []Job
-	onPanic func(err error)
+	onPanic func(err any)
 	wait    sync.WaitGroup
 	mutex   sync.Mutex
 	running bool
@@ -37,7 +36,7 @@ func (t *Task) ClearJobs() {
 	t.mutex.Unlock()
 }
 
-func (t *Task) OnPanic(onPanic func(err error)) {
+func (t *Task) OnPanic(onPanic func(err any)) {
 	t.onPanic = onPanic
 }
 
@@ -59,7 +58,7 @@ func (t *Task) Run() {
 				defer func() {
 					if err := recover(); err != nil {
 						if t.onPanic != nil {
-							t.onPanic(fmt.Errorf("%s", err))
+							t.onPanic(err)
 						}
 					}
 				}()
