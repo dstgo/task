@@ -29,6 +29,27 @@ func TestTask(t *testing.T) {
 	assert.Equal(t, nil, actual)
 }
 
+func TestCancel(t *testing.T) {
+	ctx := context.Background()
+
+	task, cancel := New(ctx)
+	cancel(nil)
+
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		panic("unexpected panic")
+		return nil
+	}
+
+	task.Add(w1, w1, w1, w1, w1)
+	actual := task.Run()
+
+	assert.Equal(t, context.Canceled, actual)
+}
+
 func TestPanic(t *testing.T) {
 	ctx := context.Background()
 
