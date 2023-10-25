@@ -12,6 +12,7 @@ import (
 type Task interface {
 	Add(j ...Worker)
 	Run() error
+	OnPanic(onPanic func(err any))
 	Ctx() context.Context
 	Cancel(err error)
 	Clear() error
