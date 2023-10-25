@@ -122,8 +122,10 @@ func (t *task) Add(j ...Worker) {
 	}
 }
 
-// Run jobs until all of them finished
-// if finished all jobs successfully, it will return context.Canceled
+// Run workers until all of them finished
+// if finished all jobs successfully, it will return nil
+// else if ctx was cancelled, it will return context.Canceled
+// else it will return the error that worker returned
 func (t *task) Run() error {
 	if !t.running {
 
@@ -172,8 +174,9 @@ func (t *task) Run() error {
 		t.Clear()
 	}
 
-	// if all jobs finished normally, t.err should be nil and ctx.Err() should be context.Canceled
+	// if all jobs finished normally, t.err should be nil
 	if t.err == nil {
+		// may be ctx was canceled
 		t.err = t.ctx.Err()
 	}
 
