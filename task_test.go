@@ -1,49 +1,127 @@
 package task
 
 import (
-	"log"
-	"math/rand"
+	"context"
+	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestTask(t *testing.T) {
+	ctx := context.Background()
 
-	task := NewTask(func(err error) {
-		log.Println(err)
-	})
+	task, cancel := New(ctx)
+	defer cancel(nil)
 
-	task.AddJobs(func() {
-		time.Sleep(time.Second)
-		log.Println(1)
-	})
-
-	task.AddJobs(func() {
-		time.Sleep(time.Second * 2)
-		log.Println(22)
-	})
-
-	task.AddJobs(func() {
-		time.Sleep(time.Second * 3)
-		panic("hh")
-	})
-
-	task.Run()
-}
-
-func TestForRange(t *testing.T) {
-
-	task := NewTask(func(err error) {
-		log.Println(err)
-	})
-
-	for i := 0; i < 100; i++ {
-		i := i
-		task.AddJobs(func() {
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
-			log.Println(i)
-		})
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		panic("unexpected panic")
+		return nil
 	}
 
-	task.Run()
+	task.Add(w1, w1, w1, w1, w1)
+	actual := task.Run()
+
+	assert.Equal(t, nil, actual)
+}
+
+func TestPanic(t *testing.T) {
+	ctx := context.Background()
+
+	task, cancel := New(ctx)
+	defer cancel(nil)
+
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		panic("unexpected panic")
+		return nil
+	}
+
+	task.Add(w1, w1, w1, w1, w1)
+	actual := task.Run()
+
+	assert.NotEqual(t, nil, actual)
+}
+
+func TestTimeout(t *testing.T) {
+	ctx := context.Background()
+
+	task, cancel := WithTimeout(ctx, time.Second)
+	defer cancel(nil)
+
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		return nil
+	}
+
+	task.Add(w1, w1, w1, w1, w1)
+	actual := task.Run()
+
+	assert.Equal(t, context.DeadlineExceeded, actual)
+}
+
+func TestWithDeadLine(t *testing.T) {
+	ctx := context.Background()
+
+	task, cancel := WithDeadLine(ctx, time.Now().Add(time.Second))
+	defer cancel(nil)
+
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		return nil
+	}
+
+	task.Add(w1, w1, w1, w1, w1)
+	actual := task.Run()
+
+	assert.Equal(t, context.DeadlineExceeded, actual)
+}
+
+func TestClear(t *testing.T) {
+	ctx := context.Background()
+
+	task, cancel := New(ctx)
+	defer cancel(nil)
+
+	w1 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w1", 2*i+1)
+		}
+		return nil
+	}
+
+	w2 := func(ctx context.Context) error {
+		for i := 0; i < 100; i++ {
+			time.Sleep(time.Millisecond)
+			fmt.Println("w2", 3*i+1)
+		}
+		return nil
+	}
+
+	task.Add(w1, w1, w1, func(ctx context.Context) error {
+		task.Add(w2, w2, w2, w2)
+		return nil
+	}, w1, w1)
+
+	actual := task.Run()
+
+	assert.Equal(t, nil, actual)
+
+	actual = task.Run()
+
+	assert.Equal(t, nil, actual)
 }
