@@ -13,12 +13,12 @@ with cancel
 ctx := context.Background()
 t, cancel := task.New(ctx)
 defer cancel(nil)
-t.Add(func(ctx context.Context) error) {
+t.Add(task.NewWorker(func(ctx context.Context) error) {
     for i := 0;;i++ {
-	    fmt.Println("w",i*2+1)	
+    fmt.Println("w",i*2+1)
     }
-	return nil
-})
+    return nil
+}))
 
 err := t.Run()
 ```
@@ -28,12 +28,13 @@ with timeout
 ctx := context.Background()
 t, cancel := task.WithTimeout(ctx, time.Second)
 defer cancel(nil)
-t.Add(func(ctx context.Context) error) {
-    for i := 0;;i++ {
-        fmt.Println("w",i*2+1)
+t.Add(task.WithTimeoutWorker(func (ctx context.Context) error) {
+    for i := 0;; i++ {
+    fmt.Println("w", i*2+1)
     }
     return nil
-})
+}, time.Millisecond))
 
 err := t.Run()
+
 ```
